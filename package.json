@@ -1,0 +1,12 @@
+{
+  "name": "jsmine",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.1"
+  },
+  "scripts": {
+    "dev": "live-server --ignore=.git,node_modules"
+  }
+}
