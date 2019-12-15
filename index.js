@@ -9,8 +9,8 @@ canvas.addEventListener('contextmenu', e => {
   board.onRightClick(e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop);
 });
 
-const BW = 30;
-const BH = 30;
+const BW = 25;
+const BH = 25;
 
 let board;
 
@@ -24,7 +24,6 @@ class Board {
   init() {
     this.makeSquares();
     this.addBombs(this.width * this.height * 0.15);
-    this.print();
     this.draw(ctx);
     this.active = true;
   }
@@ -49,6 +48,24 @@ class Board {
     return this.squares[y][x];
   }
 
+  canReveal(x, y) {
+    const sq = this.get(x, y);
+    console.log('sq value', sq.value);
+    let total = 0;
+    for (let cy = Math.max(y-1, 0); cy <= Math.min(y+1, this.height-1); cy++) {
+      for (let cx = Math.max(x-1, 0); cx <= Math.min(x+1, this.width-1); cx++) {
+        if (cx === x && cy === y) continue;
+        const sq = this.get(cx, cy);
+        if (sq.isBomb() && sq.isMarked()) {
+          total += 1;
+          console.log('found', sq);
+        }
+      }
+    }
+    console.log('sq value, total', sq.value, total);
+    return total === sq.value;
+  }
+
   openNeighbors(x, y) {
     for (let cy = Math.max(y-1, 0); cy <= Math.min(y+1, this.height-1); cy++) {
       for (let cx = Math.max(x-1, 0); cx <= Math.min(x+1, this.width-1); cx++) {
@@ -69,7 +86,14 @@ class Board {
     const y = Math.floor(_y / BH);
     const square = this.get(x, y);
     console.log('right clicked', x, y, square);
-    square.toggleMarked();
+    if (square.isOpen()) {
+      if (this.canReveal(x, y)) {
+        this.openNeighbors(x, y);
+      }
+    } else {
+      square.toggleMarked();
+      this.bombsLeft = this.bombsLeft + (square.isMarked() ? -1 : 1);
+    }
     board.draw();
   }
 
@@ -109,7 +133,19 @@ class Board {
     });
   }
 
+  set bombsLeft(bl) {
+    console.log('bombsLeft', bl);
+    document.getElementById('bombsLeft').innerText = bl;
+    this._bombsLeft = bl;
+  }
+
+  get bombsLeft() {
+    return this._bombsLeft;
+  }
+
   addBombs(num) {
+    console.log('addBombs', num);
+    this.bombsLeft = num;
     for (let i = 0; i < num; i++) {
       let x, y;
       while (true) {
@@ -135,6 +171,7 @@ class Board {
           }
         }
         this.squares[y][x].c = nb > 0 ? nb : ' ';
+        this.squares[y][x].value = nb;
       }
     }
   }
@@ -157,6 +194,7 @@ class Square {
     this.x = x * BW;
     this.y = y * BH;
     this.c = c || ' ';
+    this.value = 0;
     this._open = false;
     this._mark = false;
   }
@@ -170,6 +208,7 @@ class Square {
   mark() {
     if (this._open) return;
     this._marked = true;
+    this.bombsLeft--;
   }
 
   toggleMarked() {
@@ -207,7 +246,7 @@ class Square {
 
     ctx.beginPath();
     ctx.rect(x, y, BW, BH);
-    ctx.strokeStyle = '#fff';
+    ctx.strokeStyle = '#ccc';
     ctx.stroke();
     ctx.closePath();
 
@@ -306,4 +345,4 @@ function newGame(width, height) {
   board = new Board(width, height);
 }
 
-newGame(30, 15);
+newGame(20, 10);
