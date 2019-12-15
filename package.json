@@ -7,6 +7,6 @@
     "live-server": "^1.2.1"
   },
   "scripts": {
-    "dev": "live-server --ignore=.git,node_modules"
+    "dev": "live-server --ignore=.git"
   }
 }

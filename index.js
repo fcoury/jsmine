@@ -2,28 +2,38 @@ const canvas = document.getElementById('myCanvas');
 const ctx = canvas.getContext('2d');
 
 canvas.addEventListener('click', e => {
-  const pos = {
-    x: e.pageX - canvas.offsetLeft,
-    y: e.pageY - canvas.offsetTop,
-  };
-  board.onClick(pos.x, pos.y);
+  board.onClick(e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop);
+});
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  board.onRightClick(e.pageX - canvas.offsetLeft, e.pageY - canvas.offsetTop);
 });
 
-const BW = 20;
-const BH = 20;
-const NUM_BOMBS = 100;
+const BW = 30;
+const BH = 30;
 
 let board;
 
 class Board {
   constructor(width, height) {
-    this.squares = [];
     this.width = width;
     this.height = height;
+    this.init();
+  }
 
-    for (let y = 0; y < height; y++) {
+  init() {
+    this.makeSquares();
+    this.addBombs(this.width * this.height * 0.15);
+    this.print();
+    this.draw(ctx);
+    this.active = true;
+  }
+
+  makeSquares() {
+    this.squares = [];
+    for (let y = 0; y < this.height; y++) {
       const row = [];
-      for (let x = 0; x < width; x++) {
+      for (let x = 0; x < this.width; x++) {
         const square = new Square(x, y);
         row.push(square);
       }
@@ -54,7 +64,19 @@ class Board {
     }
   }
 
+  onRightClick(_x, _y) {
+    const x = Math.floor(_x / BW);
+    const y = Math.floor(_y / BH);
+    const square = this.get(x, y);
+    console.log('right clicked', x, y, square);
+    square.toggleMarked();
+    board.draw();
+  }
+
   onClick(_x, _y) {
+    if (!this.active) {
+      return this.init();
+    }
     const x = Math.floor(_x / BW);
     const y = Math.floor(_y / BH);
     const square = this.get(x, y);
@@ -63,7 +85,28 @@ class Board {
     if (square.isEmpty()) {
       this.openNeighbors(x, y);
     }
+    if (this.isBomb(x, y)) {
+      this.gameOver();
+    }
     board.draw();
+  }
+
+  forEach(fn) {
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const square = this.get(x, y);
+        fn(square, x, y);
+      }
+    }
+  }
+
+  gameOver() {
+    this.active = false;
+    this.forEach(sq => {
+      if (sq.isBomb()) {
+        sq.open(true);
+      }
+    });
   }
 
   addBombs(num) {
@@ -115,10 +158,23 @@ class Square {
     this.y = y * BH;
     this.c = c || ' ';
     this._open = false;
+    this._mark = false;
   }
 
-  open() {
+  open(force) {
+    if (!force && this._marked) return;
+    this._marked = false;
     this._open = true;
+  }
+
+  mark() {
+    if (this._open) return;
+    this._marked = true;
+  }
+
+  toggleMarked() {
+    if (this._open) return;
+    this._marked = !this._marked;
   }
 
   isEmpty() {
@@ -133,8 +189,16 @@ class Square {
     return this._open;
   }
 
+  isMarked() {
+    return this._marked;
+  }
+
   draw() {
     const { x, y } = this;
+
+    ctx.lineWidth = 1;
+    ctx.lineHeight = 1;
+
     ctx.beginPath();
     ctx.rect(x, y, BW, BH);
     ctx.fillStyle = this._open ? '#fff' : '#bdbdbd';
@@ -148,11 +212,90 @@ class Square {
     ctx.closePath();
 
     if (this._open) {
-      ctx.font = `${Math.floor(BW/2)}px serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#000';
-      ctx.fillText(this.c, x + BW / 2, y + BH / 2);
+      if (this.isBomb()) {
+        const xf = 0.1;
+        const yf = 0.1;
+        const mx = Math.floor(BW * xf);
+        const my = Math.floor(BH * yf);
+        console.log('BW, BH, mx, my', BW, BH, mx, my);
+        const ix = x + mx;
+        const iy = y + my;
+        const sx = BW - (mx*2);
+        const sy = BH - (my*2);
+        const fx = ix + sx;
+        const fy = iy + sy;
+        const af = Math.max(Math.floor(BW * 0.15), 1);
+
+        // start from 50% width and top margin
+        ctx.beginPath();
+        ctx.strokeStyle = '#000';
+        ctx.moveTo(x + BW/2, iy);
+        // draw to 50% width and bottom margin
+        ctx.lineTo(x + BW/2, fy);
+        // ctx.lineTo(0,0)
+        // console.log('x', tx + (fx / 2), iy, ix + (fx / 2), fy);
+        // start from left margin and 50% height
+        ctx.moveTo(ix, y + BH/2);
+        // draw to right miargin and 50% height
+        ctx.lineTo(fx, y + BH/2);
+        ctx.stroke();
+
+        // move to left margin + 1 and top margin + 1
+        // draw to right margin - 1 and bottom margin -1
+        // move to right margin-af and top margin+af
+        // draw to left margin +1 and bottom margin-af
+        ctx.beginPath();
+        console.log('ix, ix+af', ix, ix+af);
+        ctx.moveTo(ix+af, iy+af);
+        ctx.lineTo(fx-af, fy-af);
+        ctx.moveTo(fx-af, iy+af);
+        ctx.lineTo(ix+af, fy-af);
+        ctx.stroke();
+
+        // move to mid point
+        // draw circle for width - margin - 2
+        ctx.beginPath();
+        ctx.arc(x+BW/2, y+BH/2, (BH)/4, 0, 2 * Math.PI);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+
+        // draw square on top margin + 3
+        ctx.beginPath();
+        ctx.rect(ix+(af*2), iy+(af*2), af, af);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+      } else {
+        ctx.font = `${Math.floor(BW/2)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#000';
+        ctx.fillText(this.c, x + BW / 2, y + BH / 2);
+      }
+    }
+
+    if (this._marked) {
+      const bx = 0.2;
+      const by = 0.2;
+      const ix = x + (Math.floor(BW * bx));
+      const iy = y + (Math.floor(BH * by));
+
+      const midf = (1-(by*2))/2;
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.lineHeight = 2;
+      // start at 10% width
+      // start at 10% height
+      ctx.moveTo(ix, y + (Math.floor(BH * (1-by))));
+      // line from start to 90% height
+      ctx.lineTo(ix, iy);
+      // line from start to 90% width, 25% height
+      ctx.lineTo(x + (Math.floor(BW * (1-bx))), y + (Math.floor(BH * midf)))
+      // line from 90% width, 25% height to 10% width, 50% height
+      ctx.lineTo(ix, y + (Math.floor(BH * midf*2)))
+      ctx.stroke();
+      ctx.closePath();
     }
   }
 }
@@ -164,9 +307,6 @@ function newGame(width, height) {
   canvas.height = height * BH;
 
   board = new Board(width, height);
-  board.addBombs(width * height * 0.15);
-  board.print();
-  board.draw(ctx);
 }
 
-newGame(60, 40);
+newGame(30, 15);
