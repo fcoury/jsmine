@@ -217,7 +217,6 @@ class Square {
         const yf = 0.1;
         const mx = Math.floor(BW * xf);
         const my = Math.floor(BH * yf);
-        console.log('BW, BH, mx, my', BW, BH, mx, my);
         const ix = x + mx;
         const iy = y + my;
         const sx = BW - (mx*2);
@@ -233,7 +232,6 @@ class Square {
         // draw to 50% width and bottom margin
         ctx.lineTo(x + BW/2, fy);
         // ctx.lineTo(0,0)
-        // console.log('x', tx + (fx / 2), iy, ix + (fx / 2), fy);
         // start from left margin and 50% height
         ctx.moveTo(ix, y + BH/2);
         // draw to right miargin and 50% height
@@ -245,7 +243,6 @@ class Square {
         // move to right margin-af and top margin+af
         // draw to left margin +1 and bottom margin-af
         ctx.beginPath();
-        console.log('ix, ix+af', ix, ix+af);
         ctx.moveTo(ix+af, iy+af);
         ctx.lineTo(fx-af, fy-af);
         ctx.moveTo(fx-af, iy+af);
