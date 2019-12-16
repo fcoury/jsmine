@@ -50,7 +50,6 @@ class Board {
 
   canReveal(x, y) {
     const sq = this.get(x, y);
-    console.log('sq value', sq.value);
     let total = 0;
     for (let cy = Math.max(y-1, 0); cy <= Math.min(y+1, this.height-1); cy++) {
       for (let cx = Math.max(x-1, 0); cx <= Math.min(x+1, this.width-1); cx++) {
@@ -62,22 +61,36 @@ class Board {
         }
       }
     }
-    console.log('sq value, total', sq.value, total);
     return total === sq.value;
   }
 
-  openNeighbors(x, y) {
+  openNeighbors(x, y, force=false) {
+    let bombFound = false;
     for (let cy = Math.max(y-1, 0); cy <= Math.min(y+1, this.height-1); cy++) {
       for (let cx = Math.max(x-1, 0); cx <= Math.min(x+1, this.width-1); cx++) {
         if (cx === x && cy === y) continue;
         const sq = this.get(cx, cy);
-        if (sq.isOpen() || sq.isBomb()) continue;
+        if (sq.isOpen()) continue;
+
+        if (sq.isBomb()) {
+          if (force) {
+            if (!sq.isMarked()) {
+              sq.open();
+              bombFound = true;
+            }
+          } else {
+            continue;
+          }
+        }
 
         sq.open();
         if (sq.isEmpty()) {
           this.openNeighbors(cx, cy);
         }
       }
+    }
+    if (bombFound) {
+      this.gameOver();
     }
   }
 
@@ -87,9 +100,9 @@ class Board {
     const square = this.get(x, y);
     console.log('right clicked', x, y, square);
     if (square.isOpen()) {
-      if (this.canReveal(x, y)) {
-        this.openNeighbors(x, y);
-      }
+      // if (this.canReveal(x, y)) {
+        this.openNeighbors(x, y, true);
+      // }
     } else {
       square.toggleMarked();
       this.bombsLeft = this.bombsLeft + (square.isMarked() ? -1 : 1);
