@@ -98,14 +98,13 @@ class Board {
     const x = Math.floor(_x / BW);
     const y = Math.floor(_y / BH);
     const square = this.get(x, y);
-    console.log('right clicked', x, y, square);
     if (square.isOpen()) {
-      // if (this.canReveal(x, y)) {
-        this.openNeighbors(x, y, true);
-      // }
-    } else {
-      square.toggleMarked();
-      this.bombsLeft = this.bombsLeft + (square.isMarked() ? -1 : 1);
+      return;
+    }
+    square.toggleMarked();
+    this.bombsLeft = this.bombsLeft + (square.isMarked() ? -1 : 1);
+    if (this.bombsLeft < 1) {
+      this.win();
     }
     board.draw();
   }
@@ -118,6 +117,10 @@ class Board {
     const y = Math.floor(_y / BH);
     const square = this.get(x, y);
     console.log('clicked', x, y, square);
+    if (square.isOpen()) {
+      this.openNeighbors(x, y, true);
+      return this.draw();
+    }
     square.open();
     if (square.isEmpty()) {
       this.openNeighbors(x, y);
@@ -146,9 +149,15 @@ class Board {
     });
   }
 
+  win() {
+    this.active = false;
+    this.forEach(sq => sq.open());
+    document.getElementById('display').innerText = 'YOU WIN!';
+  }
+
   set bombsLeft(bl) {
-    console.log('bombsLeft', bl);
-    document.getElementById('bombsLeft').innerText = bl;
+    console.log('display', bl);
+    document.getElementById('display').innerText = bl;
     this._bombsLeft = bl;
   }
 
