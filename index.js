@@ -104,7 +104,7 @@ class Board {
     square.toggleMarked();
     this.bombsLeft = this.bombsLeft + (square.isMarked() ? -1 : 1);
     if (this.bombsLeft < 1) {
-      this.win();
+      this.checkWin();
     }
     board.draw();
   }
@@ -147,12 +147,15 @@ class Board {
         sq.open(true);
       }
     });
+    document.getElementById('display').innerText = 'YOU LOST!';
   }
 
-  win() {
+  checkWin() {
     this.active = false;
+    const win = !this.squares.find(row => row.find(sq => (sq.isMarked() && !sq.isBomb())));
     this.forEach(sq => sq.open());
-    document.getElementById('display').innerText = 'YOU WIN!';
+    document.getElementById('display').innerText = win
+      ? 'YOU WIN!' : 'YOU LOST!';
   }
 
   set bombsLeft(bl) {
